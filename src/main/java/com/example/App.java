@@ -5,83 +5,99 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+
+import io.github.bonigarcia.wdm.WebDriverManager;
 
 import java.time.Duration;
 
 public class App {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
 
+        //  Setup ChromeDriver automatically (NO version issues)
+        WebDriverManager.chromedriver().setup();
+
+        //  Chrome options for Jenkins (VERY IMPORTANT)
         ChromeOptions options = new ChromeOptions();
-
-        // Required for Jenkins (Linux headless execution)
-        options.addArguments("--headless=new");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--headless=new");          // Run without UI
+        options.addArguments("--no-sandbox");            // Required for Linux
+        options.addArguments("--disable-dev-shm-usage"); // Prevent crashes
         options.addArguments("--window-size=1920,1080");
         options.addArguments("--remote-allow-origins=*");
 
         WebDriver driver = new ChromeDriver(options);
 
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        try {
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
 
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
-        Actions actions = new Actions(driver);
+            // ============================
+            // 🔹 Step 1: SauceDemo Login
+            // ============================
+            driver.get("https://www.saucedemo.com/");
 
-        // 🔹 Step 1: SauceDemo Login
-        driver.get("https://www.saucedemo.com/");
+            driver.findElement(By.id("user-name")).sendKeys("standard_user");
+            driver.findElement(By.id("password")).sendKeys("secret_sauce");
+            driver.findElement(By.id("login-button")).click();
 
-        driver.findElement(By.id("user-name")).sendKeys("standard_user");
-        driver.findElement(By.id("password")).sendKeys("secret_sauce");
-        driver.findElement(By.id("login-button")).click();
+            System.out.println("SauceDemo login successful");
 
-        System.out.println("SauceDemo login successful");
+            // ============================
+            // 🔹 Step 2: Automation Exercise
+            // ============================
+            driver.get("https://automationexercise.com/products");
 
-        // 🔹 Step 2: Automation Exercise (NO new tab)
-        driver.get("https://automationexercise.com/products");
+            driver.findElement(By.id("search_product")).sendKeys("Men Tshirt");
+            driver.findElement(By.id("submit_search")).click();
 
-        driver.findElement(By.id("search_product")).sendKeys("Men Tshirt");
-        driver.findElement(By.id("submit_search")).click();
+            WebElement product = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(
+                            By.cssSelector("a[data-product-id='2']")
+                    )
+            );
 
-        WebElement product = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(
-                        By.cssSelector("a[data-product-id='2']")
-                )
-        );
+            ((JavascriptExecutor) driver)
+                    .executeScript("arguments[0].scrollIntoView({block:'center'});", product);
 
-        ((org.openqa.selenium.JavascriptExecutor) driver)
-                .executeScript("arguments[0].scrollIntoView({block:'center'});", product);
+            ((JavascriptExecutor) driver)
+                    .executeScript("arguments[0].click();", product);
 
-        ((org.openqa.selenium.JavascriptExecutor) driver)
-                .executeScript("arguments[0].click();", product);
+            WebElement viewCart = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                            By.cssSelector("#cartModal a[href='/view_cart']")
+                    )
+            );
 
-        WebElement viewCart = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                        By.cssSelector("#cartModal a[href='/view_cart']")
-                )
-        );
+            ((JavascriptExecutor) driver)
+                    .executeScript("arguments[0].click();", viewCart);
 
-        ((org.openqa.selenium.JavascriptExecutor) driver)
-                .executeScript("arguments[0].click();", viewCart);
+            System.out.println("Product added to cart");
 
-        System.out.println("Automation Exercise product added to cart");
+            // ============================
+            // 🔹 Step 3: Practice Test Login
+            // ============================
+            driver.get("https://practicetestautomation.com/practice-test-login/");
 
-        // 🔹 Step 3: Practice Test Automation (NO new tab)
-        driver.get("https://practicetestautomation.com/practice-test-login/");
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("username")));
 
-        Thread.sleep(2000);
+            driver.findElement(By.id("username")).sendKeys("student");
+            driver.findElement(By.id("password")).sendKeys("Password123");
+            driver.findElement(By.id("submit")).click();
 
-        driver.findElement(By.id("username")).sendKeys("student");
-        driver.findElement(By.id("password")).sendKeys("Password123");
-        driver.findElement(By.id("submit")).click();
+            System.out.println("Practice Test login successful");
 
-        System.out.println("Practice Test Automation login successful");
+            // Wait to observe execution (optional)
+            Thread.sleep(3000);
 
-        Thread.sleep(5000);
-
-        driver.quit();
+        } catch (Exception e) {
+            System.out.println("ERROR: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            //  Always close browser
+            driver.quit();
+        }
     }
 }
